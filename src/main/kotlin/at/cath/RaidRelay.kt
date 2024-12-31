@@ -1,6 +1,5 @@
 package at.cath
 
-import com.google.common.util.concurrent.Striped
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -15,13 +14,12 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 private val WEBHOOK_PATTERN = "https://(?:[\\w-]+\\.)?discord\\.com/api/webhooks/\\d+/[\\w-]+".toRegex()
 private val client = HttpClient(CIO)
@@ -31,37 +29,43 @@ private val raids = mapOf(
     "Orphion's Nexus of Light" to "https://static.wikia.nocookie.net/wynncraft_gamepedia_en/images/6/63/Orphion%27sNexusofLightIcon.png",
     "Nest of the Grootslangs" to "https://static.wikia.nocookie.net/wynncraft_gamepedia_en/images/5/52/NestoftheGrootslangsIcon.png"
 )
-private val guildMembers = mutableSetOf<String>()
+
+@Volatile
 private var lastGuildUpdate = 0L
+private val guildMembers = mutableSetOf<String>()
 
-private val guildUpdateLock = ReentrantLock()
-
-// multiple locks to allow different raid keys to process concurrently
-// collisions possible but does not matter since worst case it will just
-// process two different raid parties sequentially
-private val raidKeyLocks = Striped.lock(32)
+private val guildUpdateLock = Mutex()
 
 @Serializable
-data class RaidReport(val raidType: String, val players: List<String>, val reporterUuid: String)
+data class RaidReport(
+    val raidType: String,
+    val players: List<String>,
+    val reporterUuid: String
+) {
+    // override since we want to use the hash code as a key for a unique raid,
+    // meaning we want to ignore the reporterUuid here
+    override fun hashCode(): Int = 31 * raidType.hashCode() + players.hashCode()
+    override fun equals(other: Any?): Boolean = when {
+        this === other -> true
+        other !is RaidReport -> false
+        else -> raidType == other.raidType && players == other.players
+    }
+}
 
-// we check the first player name since many parties may be running the same raid
-data class UniqueRaidParty(val raidName: String, val firstPlayerName: String)
-
-private val cooldowns = ConcurrentHashMap<UniqueRaidParty, Long>()
+// raid hashcode -> timestamp
+private val cooldowns = ConcurrentHashMap<Int, Long>()
 private val cooldownDuration = TimeUnit.MINUTES.toMillis(1)
 
-private fun shouldProcess(raidKey: UniqueRaidParty): Boolean {
-    raidKeyLocks.get(raidKey).withLock {
-        val now = System.currentTimeMillis()
-        val previous = cooldowns[raidKey]
-        if (previous == null) {
-            cooldowns[raidKey] = now
-            return true
-        }
-        if (now - previous <= cooldownDuration) return false
-        cooldowns[raidKey] = now
-        return true
+fun shouldProcess(raidReport: RaidReport): Boolean {
+    val now = System.currentTimeMillis()
+    val raidKey = raidReport.hashCode()
+    val previous = cooldowns.putIfAbsent(raidKey, now) ?: return true
+
+    if (now - previous > cooldownDuration) {
+        return cooldowns.replace(raidKey, previous, now)
     }
+
+    return false
 }
 
 suspend fun updateGuild() {
@@ -84,11 +88,14 @@ suspend fun updateGuild() {
 }
 
 suspend fun isInGuild(uuid: String): Boolean {
-    guildUpdateLock.lock()
-    if (System.currentTimeMillis() - lastGuildUpdate > TimeUnit.MINUTES.toMillis(10))
-        updateGuild()
-    guildUpdateLock.unlock()
-    return uuid in guildMembers
+    try {
+        guildUpdateLock.lock()
+        if (System.currentTimeMillis() - lastGuildUpdate > TimeUnit.MINUTES.toMillis(10))
+            updateGuild()
+        return uuid in guildMembers
+    } finally {
+        guildUpdateLock.unlock()
+    }
 }
 
 fun main() {
@@ -105,8 +112,6 @@ fun main() {
         routing {
             post("/raid") {
                 val raidReport = call.receive<RaidReport>()
-                val raidParty = UniqueRaidParty(raidReport.raidType, raidReport.players.first())
-
                 val raidImg = raids[raidReport.raidType] ?: run {
                     call.respond(HttpStatusCode.BadRequest, "Unknown raid type")
                     log.error("Unknown raid type: ${raidReport.raidType}")
@@ -119,7 +124,7 @@ fun main() {
                     return@post
                 }
 
-                if (!shouldProcess(raidParty)) {
+                if (!shouldProcess(raidReport)) {
                     log.error("Raid message from ${raidReport.reporterUuid} ignored due to cooldown")
                     call.respond(HttpStatusCode.TooManyRequests, "Raid message ignored due to cooldown")
                     return@post
