@@ -30,11 +30,11 @@ private val client = HttpClient(CIO) {
     }
 }
 private val raids = mapOf(
-    "The Canyon Colossus" to "https://static.wikia.nocookie.net/wynncraft_gamepedia_en/images/2/2d/TheCanyonColossusIcon.png",
-    "The Nameless Anomaly" to "https://static.wikia.nocookie.net/wynncraft_gamepedia_en/images/9/92/TheNamelessAnomalyIcon.png",
-    "Orphion's Nexus of Light" to "https://static.wikia.nocookie.net/wynncraft_gamepedia_en/images/6/63/Orphion%27sNexusofLightIcon.png",
-    "Nest of the Grootslangs" to "https://static.wikia.nocookie.net/wynncraft_gamepedia_en/images/5/52/NestoftheGrootslangsIcon.png",
-    "The Wartorn Palace" to "https://i.imgur.com/YZkZYlk.png", // todo: placeholder
+    "The Canyon Colossus" to "https://wynncraft.wiki.gg/wiki/The_Canyon_Colossus_(Raid)#/media/File:TheCanyonColossusIcon.png",
+    "The Nameless Anomaly" to "https://wynncraft.wiki.gg/wiki/The_Nameless_Anomaly_(Raid)#/media/File:TheNamelessAnomalyIcon.png",
+    "Orphion's Nexus of Light" to "https://wynncraft.wiki.gg/wiki/Orphion%27s_Nexus_of_Light#/media/File:Orphion'sNexusofLightIcon.png",
+    "Nest of the Grootslangs" to "https://wynncraft.wiki.gg/wiki/Nest_of_the_Grootslangs#/media/File:NestoftheGrootslangsIcon.png",
+    "The Wartorn Palace" to "https://wynncraft.wiki.gg/wiki/The_Wartorn_Palace#/media/File:TheWartornPalaceIcon.png",
 )
 
 @Volatile
