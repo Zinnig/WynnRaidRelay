@@ -30,11 +30,11 @@ private val client = HttpClient(CIO) {
     }
 }
 private val raids = mapOf(
-    "The Canyon Colossus" to "https://wynncraft.wiki.gg/wiki/The_Canyon_Colossus_(Raid)#/media/File:TheCanyonColossusIcon.png",
-    "The Nameless Anomaly" to "https://wynncraft.wiki.gg/wiki/The_Nameless_Anomaly_(Raid)#/media/File:TheNamelessAnomalyIcon.png",
-    "Orphion's Nexus of Light" to "https://wynncraft.wiki.gg/wiki/Orphion%27s_Nexus_of_Light#/media/File:Orphion'sNexusofLightIcon.png",
-    "Nest of the Grootslangs" to "https://wynncraft.wiki.gg/wiki/Nest_of_the_Grootslangs#/media/File:NestoftheGrootslangsIcon.png",
-    "The Wartorn Palace" to "https://wynncraft.wiki.gg/wiki/The_Wartorn_Palace#/media/File:TheWartornPalaceIcon.png",
+    "The Canyon Colossus" to "https://wynncraft.wiki.gg/images/TheCanyonColossusIcon.png",
+    "The Nameless Anomaly" to "https://wynncraft.wiki.gg/images/TheNamelessAnomalyIcon.png",
+    "Orphion's Nexus of Light" to "https://wynncraft.wiki.gg/images/Orphion%27sNexusofLightIcon.png",
+    "Nest of the Grootslangs" to "https://wynncraft.wiki.gg/images/NestoftheGrootslangsIcon.png",
+    "The Wartorn Palace" to "https://wynncraft.wiki.gg/images/TheWartornPalaceIcon.png",
 )
 
 @Volatile
